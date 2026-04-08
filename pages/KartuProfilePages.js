@@ -1,117 +1,104 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Image, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import KartuProfil from "../components/KartuProfil";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// CLASS COMPONENT
-export default class KartuProfilePages extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            kodeKelas: '',
-            isHadir: false,
-            waktuAbsen: '',
-            jamRealtime: 'Memuat jam...',
-        };
 
-        this.studentData = {
-            name: 'Sheva Yudha Yunior',
-            nim: '0320240078',
-            prodi: 'Manajemen Informatika - Politeknik ASTRA',
-        };
-    }
+export default function KartuProfilePages() {
+    // A. INISIALISASI STATE
+    const [kodeKelas, setKodeKelas] = useState('');
+    const [isHadir, setIsHadir] = useState(false);
+    const [waktuAbsen, setWaktuAbsen] = useState('');
+    const [jamRealtime, setJamRealtime] = useState('Memuat Jam...');
+
+    const studentData = {
+        name: 'Sheva Yudha Yunior',
+        nim: '0320240078',
+        prodi: 'Manajemen Informatika',
+    };
 
     // B. FASE MOUNTING (Komponen Lahir)
-    componentDidMount() {
-        console.log('[MOUNTING] Aplikasi Presensi Dibuka.');
+    useEffect(() => {
+        console.log('[MOUNTING] Aplikasi Dibuka (via useEffect). Jam menyala.');
 
-        // Mulai jam digital tiap 1 detik
-        this.intervalJam = setInterval(() => {
-            const waktu = new Date().toLocaleTimeString('id-ID', {
+        const intervalJam = setInterval(() => {
+            const waktu = new Date().toLocaleDateString('id-ID', {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
             });
-
-            this.setState({ jamRealtime: waktu }); // Update state jam
+            setJamRealtime(waktu);
         }, 1000);
-    }
+        
+        return() => {
+            console.log('[UNMOUNTING] Aplikasi Ditutup. Membersihkan Interval Jam!');
+            clearInterval(intervalJam);
+        };
+    }, []); // Kosong berarti hanya dijalankan sekali saat komponen pertama kali muncul
 
-    // C. FASE UPDATING (Komponen Berubah)
-    componentDidUpdate(prevProps, prevState) {
-        // Mengecek apakah mahasiswa baru saja absen
-        if (this.state.isHadir === true && prevState.isHadir === false) {
-            console.log(`[UPDATING] Sukses presensi pada pukul: ${this.state.waktuAbsen}`);
+    // C. FASE UPDATING
+    useEffect(() => {
+        if (isHadir) {
+            console.log(`[UPDATING] Sukses presensi pada pukul: ${waktuAbsen}`);
         }
-    }
-
-    // D. FASE UNMOUNTING (Komponen Mati)
-    componentWillUnmount() {
-        console.log('[UNMOUNTING] Aplikasi Ditutup. Membersihkan memori...');
-        clearInterval(this.intervalJam); // Mencegah Memory Leak
-    }
+    }, [isHadir, waktuAbsen]);
 
     // E. LOGIKA EVENT HANDLER
-    handleAbsen = () => {
-        if (this.state.kodeKelas.trim() === '') {
+    const handleAbsen = () => {
+        if (kodeKelas.trim() === '') {
             alert('Masukkan kode kelas (Simulasi QR) terlebih dahulu!');
             return;
         }
 
         // Ubah state menjadi hadir dan rekam jam saat itu
-        this.setState({
-            isHadir: true,
-            waktuAbsen: this.state.jamRealtime
-        });
+        setIsHadir(true);
+        setWaktuAbsen(jamRealtime);
     };
 
     // F. FUNGSI RENDER WAJIB
-    render() {
-        return (
-            <SafeAreaView style={styles.container}>
-                {/* HEADER DENGAN JAM DIGITAL (Terhubung ke State) */}
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Sistem Presensi</Text>
-                    <Text style={styles.clockText}>{this.state.jamRealtime}</Text>
-                </View>
+    return (
+        <SafeAreaView style={styles.container}>
+            {/* HEADER DENGAN JAM DIGITAL (Terhubung ke State) */}
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Sistem Presensi</Text>
+                <Text style={styles.clockText}>{jamRealtime}</Text>
+            </View>
 
-                {/* MEMANGGIL FUNCTIONAL COMPONENT DAN MENGIRIM PROPS */}
-                <KartuProfil student={this.studentData} />
+            {/* MEMANGGIL FUNCTIONAL COMPONENT DAN MENGIRIM PROPS */}
+            <KartuProfil student={studentData} />
 
-                {/* SEKSI PRESENSI (CONDITIONAL RENDERING) */}
-                <View style={styles.actionSection}>
-                    {this.state.isHadir ? (
-                        <View style={styles.successCard}>
-                            <Image
-                                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/190/190411.png' }}
-                                style={styles.successIcon}
+            {/* SEKSI PRESENSI (CONDITIONAL RENDERING) */}
+            <View style={styles.actionSection}>
+                {isHadir ? (
+                    <View style={styles.successCard}>
+                        <Image
+                            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/190/190411.png' }}
+                            style={styles.successIcon}
+                        />
+                        <Text style={styles.successText}>Presensi Berhasil!</Text>
+                        <Text style={styles.timeText}>Tercatat pada: {waktuAbsen} WIB</Text>
+                        <Text style={styles.codeText}>Kode Terverifikasi: {kodeKelas}</Text>
+                    </View>
+                ) : (
+                        <View style={styles.inputCard}>
+                            <Text style={styles.instructionText}>Masukkan Kode Kelas:</Text>
+                            <Text style={styles.noteText}>(Simulasi dari hasil Scan QR Kamera)</Text>
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Contoh: TRPL-03"
+                                value={kodeKelas}
+                                onChangeText={setKodeKelas}
+                                autoCapitalize="characters"
                             />
-                            <Text style={styles.successText}>Presensi Berhasil!</Text>
-                            <Text style={styles.timeText}>Tercatat pada: {this.state.waktuAbsen} WIB</Text>
-                            <Text style={styles.codeText}>Kode Terverifikasi: {this.state.kodeKelas}</Text>
-                        </View>
-                    ) : (
-                            <View style={styles.inputCard}>
-                                <Text style={styles.instructionText}>Masukkan Kode Kelas:</Text>
-                                <Text style={styles.noteText}>(Simulasi dari hasil Scan QR Kamera)</Text>
-
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Contoh: TRPL-03"
-                                    value={this.state.kodeKelas}
-                                    // Hati-hati: Di class, kita gunakan this.setState
-                                    onChangeText={(text) => this.setState({ kodeKelas: text })}
-                                    autoCapitalize="characters"
-                                />
-                                <TouchableOpacity style={styles.buttonSubmit} onPress={this.handleAbsen}>
-                                    <Text style={styles.buttonText}>Konfirmasi Kehadiran</Text>
-                                </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonSubmit} onPress={handleAbsen}>
+                                <Text style={styles.buttonText}>Konfirmasi Kehadiran</Text>
+                            </TouchableOpacity>
                         </View>
                     )}
-                </View>
-            </SafeAreaView>
-        );
-    }
+            </View>
+        </SafeAreaView>
+    );
 };    
 
 const styles = StyleSheet.create({
@@ -211,4 +198,4 @@ const styles = StyleSheet.create({
             fontFamily: 'monospace',
         },
     }
-); 
+);  
